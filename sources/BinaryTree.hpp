@@ -400,33 +400,23 @@ namespace ariel
         }
         friend std::ostream &operator<<(std::ostream &out, const BinaryTree<T> &bt)
         {
-            print2DUtil(bt.root, 0);
+            print_tree(bt.root, 0);
             return out;
         }
 
-        static void print2DUtil(shared_ptr<Node> start, int space) 
+        static void print_tree(shared_ptr<Node> start, int space) 
             { 
-            // Base case 
             if (start == NULL){
                 return; 
             }
-
-            // Increase distance between levels 
             space += COUNT; 
-
-            // Process right child first 
-            print2DUtil(start->right_son, space); 
-
-            // Print current node after space 
-            // count 
+            print_tree(start->right_son, space); 
             cout<<endl; 
             for (int i = COUNT; i < space; i++){
                 cout<<" "; 
             }
             cout<<start->value<<"\n"; 
-
-            // Process left child 
-            print2DUtil(start->left_son, space); 
+            print_tree(start->left_son, space); 
         } 
     };
 }
