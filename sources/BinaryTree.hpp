@@ -1,7 +1,8 @@
 #pragma once
 #include <iostream>
 #include <queue>
-#define COUNT 10
+#include <memory>
+int constexpr COUNT = 10;
 
 using namespace std;
 
@@ -13,34 +14,94 @@ namespace ariel
     private:
         struct Node {
             T value;
-            Node* right_son;
-            Node* left_son;
+            shared_ptr <Node> right_son;
+            shared_ptr <Node> left_son;
             Node(const T& v, Node* l, Node* r)
                     : value(v), right_son(r), left_son(l) {
             }
+
+            Node(const Node &other) : value(other.value) 
+            {
+                if (other.left_son != nullptr) {
+                    shared_ptr <Node> temp{new Node(*other.left_son)};
+                    left_son = temp;
+                } 
+                else {
+                    left_son = nullptr;
+                }
+                if (other.right_son != nullptr) {
+                    shared_ptr <Node> temp{new Node(*other.right_son)};
+                    right_son = temp;
+                } 
+                else {
+                    right_son = nullptr;
+                }
+            }
+
+            Node &operator=(const Node &other) 
+            {
+                if (this == &other) {
+                    return *this;
+                }
+                value = other.value;
+                if (other.left_son != nullptr) {
+                    left_son = new Node(*other.left_son);
+                } 
+                else {
+                    left_son = nullptr;
+                }
+                if (other.right_son != nullptr) {
+                    right_son = new Node(*other.right_son);
+                } 
+                else {
+                    right_son = nullptr;
+                }
+            }
+
+            Node(Node &&other) noexcept { //בנאי שמקבל פוינטר ושומר אותו בשדות של המחלקה
+                value = other.value;
+                right_son = other.right_son;
+                other.right_son = nullptr;
+                left_son = other.left_son;
+                other.left_son = nullptr;
+            }
+
+            Node &operator=(Node &&other) noexcept { //אופרטור השמה שמוחק את הפוינטר הישן ושם במקומו אחד חדש
+                if (this == &other) {
+                    return *this;
+                }
+                value = other.value;
+                right_son = other.right_son;
+                other.right_son = nullptr;
+                left_son = other.left_son;
+                other.left_son = nullptr;
+            }
+
+            ~Node() = default;
         }; // END OF struct Node
 
     class preorder {
     private:
-        Node* pointer_to_current_node;
-        queue<Node*> q_pre;
+        shared_ptr<Node> pointer_to_current_node;
+        queue<shared_ptr<Node>> q_pre;
     public:
-        void pre_order(Node* root, queue<Node*>& q_pre) {
-            if (root == nullptr){
+        void pre_order(shared_ptr <Node> *root, queue<shared_ptr<Node>>& q_pre) {
+            if (*root == nullptr){
                 return;
             } 
-            q_pre.push(root);
-            pre_order(root->left_son, q_pre);
-            pre_order(root->right_son, q_pre);
+            q_pre.push(*root);
+            pre_order(&(*root)->left_son, q_pre);
+            pre_order(&(*root)->right_son, q_pre);
         }
 
-        preorder(Node* ptr = nullptr): pointer_to_current_node(ptr) {
+        preorder(shared_ptr <Node> ptr): pointer_to_current_node(ptr) {
             if(ptr == nullptr){
                 return;
             }
-            pre_order(pointer_to_current_node, q_pre);
+            pre_order(&pointer_to_current_node, q_pre);
             q_pre.push(nullptr);
-            pointer_to_current_node = q_pre.front();
+            shared_ptr <Node> temp = q_pre.front();
+            pointer_to_current_node = temp;
             q_pre.pop();
         }
 
@@ -58,50 +119,51 @@ namespace ariel
         }
 
         
-        preorder& operator++() {
+        preorder& operator++() { //i++ prefix increment operator
             pointer_to_current_node = q_pre.front();
             q_pre.pop();
             return *this;
         }
 
-        preorder operator++ (int){
+        preorder operator++ (int){ //++i postfix increment operator
             preorder temp = *this;
-            this->pointer_to_current_node = q_pre.front();
+            pointer_to_current_node = q_pre.front();
             q_pre.pop();
             return temp;
         }
 
-        bool operator==(preorder node){
-            return pointer_to_current_node==node.pointer_to_current_node;
+        bool operator==(const preorder& node) const {
+            return pointer_to_current_node == node.pointer_to_current_node;
         }
 
-        bool operator!=(const preorder& rhs) const {
-            return !q_pre.empty();
+        bool operator!=(const preorder& node) const {
+            return pointer_to_current_node != node.pointer_to_current_node;;
         }
     };  // END OF CLASS preorder
 
     class inorder {
     private:
-        Node* pointer_to_current_node;
-        queue<Node*> q_in;
+        shared_ptr <Node> pointer_to_current_node;
+        queue<shared_ptr<Node>> q_in;
     public:
 
-        void in_order(Node* root, queue<Node*>& q_in){
-            if (root == nullptr){
+        void in_order(shared_ptr <Node> *root, queue<shared_ptr<Node>>& q_in){
+            if (*root == nullptr){
                 return;
             } 
-            in_order(root->left_son, q_in);
-            q_in.push(root);
-            in_order(root->right_son, q_in);
+            in_order(&(*root)->left_son, q_in);
+            q_in.push(*root);
+            in_order(&(*root)->right_son, q_in);
         }
 
-        inorder(Node* ptr = nullptr): pointer_to_current_node(ptr) {
+        inorder(shared_ptr <Node> ptr): pointer_to_current_node(ptr) {
             if(ptr == nullptr){
                 return;
             }
-            in_order(pointer_to_current_node, q_in);
+            in_order(&pointer_to_current_node, q_in);
             q_in.push(nullptr);
-            pointer_to_current_node = q_in.front();
+            shared_ptr <Node> temp = q_in.front();
+            pointer_to_current_node = temp;
             q_in.pop();
         }
 
@@ -131,37 +193,38 @@ namespace ariel
             return temp;
         }
 
-        bool operator==(inorder node){
-            return pointer_to_current_node==node.pointer_to_current_node;
+        bool operator==(const inorder& node) const{
+            return pointer_to_current_node == node.pointer_to_current_node;
         }
 
-        bool operator!=(const inorder& rhs) const {
-            return !q_in.empty();
+        bool operator!=(const inorder& node) const {
+            return pointer_to_current_node != node.pointer_to_current_node;
         }
     };  // END OF CLASS inorder
 
     class postorder {
     private:
-        Node* pointer_to_current_node;
-        queue<Node*> q_post;
+        shared_ptr <Node> pointer_to_current_node;
+        queue<shared_ptr<Node>> q_post;
     public:
 
-        void post_order(Node* root, queue<Node*>& q_post){
-            if (root == nullptr){
+        void post_order(shared_ptr <Node> *root, queue<shared_ptr<Node>>& q_post){
+            if (*root == nullptr){
                 return;
             }
-            post_order(root->left_son, q_post);
-            post_order(root->right_son, q_post);
-            q_post.push(root);
+            post_order(&(*root)->left_son, q_post);
+            post_order(&(*root)->right_son, q_post);
+            q_post.push(*root);
         }
 
-        postorder(Node* ptr = nullptr): pointer_to_current_node(ptr) {
+        postorder(shared_ptr <Node> ptr): pointer_to_current_node(ptr) {
             if(ptr == nullptr){
                 return;
             }
-            post_order(pointer_to_current_node, q_post);
+            post_order(&pointer_to_current_node, q_post);
             q_post.push(nullptr);
-            pointer_to_current_node = q_post.front();
+            shared_ptr <Node> temp = q_post.front();
+            pointer_to_current_node = temp;
             q_post.pop();
         }
 
@@ -192,143 +255,69 @@ namespace ariel
             return temp;
         }
 
-        bool operator==(postorder node){
-            return pointer_to_current_node==node.pointer_to_current_node;
+        bool operator==(const postorder& node) const {
+            return pointer_to_current_node == node.pointer_to_current_node;
         }
 
-        bool operator!=(const postorder& rhs) const {
-            return !q_post.empty();
+        bool operator!=(const postorder& node) const {
+            return pointer_to_current_node != node.pointer_to_current_node;
         }
     };  // END OF CLASS postorder
 
-        Node* root;
+        shared_ptr <Node> root;
     public:
-        BinaryTree(){
-            this->root = nullptr;
-        }
-
-        void deep_copy(Node &start, Node &end)
-        {
-            if (start.left_son!=nullptr)
-            {
-                end.left_son=new Node(start.left_son->value, nullptr, nullptr);
-                deep_copy(*start.left_son,*end.left_son);
-            }
-            if (start.right_son!=nullptr)
-            {
-                end.right_son=new Node(start.right_son->value, nullptr, nullptr);
-                deep_copy(*start.right_son,*end.right_son);
-            }
-        }
+        BinaryTree() : root(nullptr){}
 
         BinaryTree(const BinaryTree<T>& node)
         {
-            if(node.root!=nullptr)
-            {
-                root=new Node(node.root->value, nullptr, nullptr);
-                deep_copy(*node.root, *root); // *root 2 argument
-            }
+            shared_ptr <Node> temp{new Node(*node.root)};
+            root = temp;
         }
-        BinaryTree(BinaryTree<T> && node) noexcept //https://en.cppreference.com/w/cpp/language/noexcept
+
+        BinaryTree(BinaryTree<T> && node) noexcept  
         {
-            root=node.root;
+            root = node.root;
             node.root=nullptr;
         }
 
-        BinaryTree& operator=(BinaryTree node)
+        BinaryTree& operator=(const BinaryTree &node)
         {
             if(this==&node)
             {
                 return *this;
             }
-            if(root!=nullptr)
-            {
-                delete root;
-            }
-            root=new Node(node.root->value, nullptr, nullptr);
-            deep_copy(*node.root,*root);
+            shared_ptr <Node> temp{new Node(*node.root)};
+            root = temp;
             return *this;
         }
+
         BinaryTree& operator=(BinaryTree&& node) noexcept
         {
-            *root=node.root;
-        }
-
-        ~BinaryTree(){}
-
-
-
-        /*BinaryTree<T>& add_root(T r)
-        {
-            if(root == nullptr){
-                root =  new Node(r, nullptr, nullptr);
+            if(this == &node){
+                return *this;
             }
-            else{
-                root->value = r;
-            }
+            root = node.root;
+            node.root = nullptr;
             return *this;
         }
 
-        Node* search(Node* root, T data){
-            if(root == nullptr){
-                return nullptr;
-            }
-            if(root->value == data){
-                return root;
-            }
-            return search(root->left_son, data);
-            return search(root->right_son, data); 
-        }
+        ~BinaryTree() = default;
 
-        BinaryTree<T>& add_left(T e, T a)
-        {
-            if(!search(root, e)){
-                throw "The BinaryTree root is NULL or The vertex is not found in the tree - add_left";
-            }
-            else{
-                if(!search(root, e)->left_son){
-                    Node* left = new Node(a, nullptr, nullptr);
-                    search(root, e)->left_son = left;
-                }
-                else{
-                    search(root, e)->left_son->value = a;
-                }
-            }
-            return *this;
-        }
-
-        BinaryTree<T>& add_right(T e, T a)
-        {
-            if(search(root, e) == nullptr){
-                throw "The BinaryTree root is NULL or The vertex is not found in the tree - add_right";
-            }
-            else{
-                if(search(root, e)->right_son == nullptr){
-                    Node* right = new Node(a, nullptr, nullptr);
-                    search(root, e)->right_son = right;
-                }
-                else{
-                    search(root, e)->right_son->value = a;
-                }
-            }
-            return *this;
-        }*/
-
-        Node* find(Node* node,T& value){
-            if(node==nullptr)
+        shared_ptr<Node> find(shared_ptr<Node> node,T& value){
+            if(node == nullptr)
             {
                 return nullptr;
             }
-            if(node->value==value)
+            if(node->value == value)
             {
                 return node;
             }
-            Node* r=find(node->right_son, value);
-            if(r)
+            shared_ptr <Node> l =find(node->left_son, value);
+            shared_ptr <Node> r =find(node->right_son, value);
+            if(l == nullptr)
             {
                 return r;
             }
-            Node* l=find(node->left_son, value);
             return l;
         }
 
@@ -336,37 +325,44 @@ namespace ariel
         {
             if(root==nullptr)
             {
-                root=new Node(root_node, nullptr, nullptr);
+                shared_ptr <Node> temp{new Node{root_node, nullptr, nullptr}};
+                root = temp;
             }
-            root->value=root_node;
+            else{
+                root->value = root_node;
+            }
             return *this;
         }
 
         BinaryTree<T>& add_left(T parent, T child)
         {
-            if(!find(root, parent))
-            {
-                throw invalid_argument("invalid_argument: parent missing in left");
+            shared_ptr <Node> n = find(root, parent);
+            if(n == nullptr){
+                throw runtime_error("Error : parent is no exist in the tree.\n");
             }
-            if(!find(root, parent)->left_son)
-            {
-                find(root, parent)->left_son=new Node(child, nullptr, nullptr);
+            if(n->left_son == nullptr){
+                shared_ptr<Node> temp{new Node{child, nullptr, nullptr}};
+                n->left_son = temp;
             }
-            find(root, parent)->left_son->value=child;
+            else{
+                n->left_son->value = child;
+            }
             return *this;
         }
 
         BinaryTree<T>& add_right(T parent, T child)
         {
-            if(!find(root, parent))
-            {
-                throw invalid_argument("invalid_argument: parent missing in right");
+            shared_ptr <Node> n = find(root, parent);
+            if(n == nullptr){
+                throw runtime_error("Error : parent is no exist in the tree.\n");
             }
-            if(!find(root, parent)->right_son)
-            {
-                find(root, parent)->right_son=new Node(child, nullptr, nullptr);
+            if(n->right_son == nullptr){
+                shared_ptr<Node> temp{new Node{child, nullptr, nullptr}};
+                n->right_son = temp;
             }
-            find(root, parent)->right_son->value=child;
+            else{
+                n->right_son->value = child;
+            }
             return *this;
         }
 
@@ -408,27 +404,29 @@ namespace ariel
             return out;
         }
 
-        static void print2DUtil(Node *root, int space) 
+        static void print2DUtil(shared_ptr<Node> start, int space) 
             { 
             // Base case 
-            if (root == NULL) 
+            if (start == NULL){
                 return; 
+            }
 
             // Increase distance between levels 
             space += COUNT; 
 
             // Process right child first 
-            print2DUtil(root->right_son, space); 
+            print2DUtil(start->right_son, space); 
 
             // Print current node after space 
             // count 
             cout<<endl; 
-            for (int i = COUNT; i < space; i++) 
+            for (int i = COUNT; i < space; i++){
                 cout<<" "; 
-            cout<<root->value<<"\n"; 
+            }
+            cout<<start->value<<"\n"; 
 
             // Process left child 
-            print2DUtil(root->left_son, space); 
+            print2DUtil(start->left_son, space); 
         } 
     };
 }
